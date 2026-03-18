@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>關西自由行 行程魔法師</title>
+  
+  <!-- 載入 Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 載入 FontAwesome 圖示庫 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- 載入 React 核心庫與 Babel (用於在瀏覽器編譯 JSX) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 20px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background-color: #94a3b8;
+    }
+    /* 列印專用樣式 */
+    @media print {
+      body { background-color: white !important; }
+      .print-hidden { display: none !important; }
+      .print-break-avoid { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans">
+  
+  <div id="root"></div>
+
+  <!-- React 應用程式邏輯 -->
+  <script type="text/babel">
+    const { useState, useMemo } = React;
+
+    // --- 景點資料庫 ---
+    const ATTRACTIONS = [
+      // ================= 大阪 (Osaka) =================
+      { id: 'osaka_castle', city: 'osaka', name: '大阪城 (Osaka Castle)', stay: 2.5, region: 13, regionName: '大阪東區', type: '經典必訪', desc: '大阪的精神象徵與歷史地標，擁有巨大的護城河與宏偉的天守閣。還可搭乘「大阪城御座船」遊護城河。', transport: '地鐵「谷町四丁目站/森之宮站」或 JR「大阪城公園站/森之宮站」皆可抵達。', tag: '賞櫻/紅葉名所' },
+      { id: 'tsutenkaku', city: 'osaka', name: '通天閣 & 新世界', stay: 1.5, region: 14, regionName: '大阪南區', type: '經典必訪', desc: '充滿濃厚的昭和復古風情，這裡是吃「大阪串炸」的聖地。', transport: '地鐵御堂筋線/堺筋線至「動物園前站」等。' },
+      { id: 'harukas', city: 'osaka', name: '阿倍野 Harukas 300 展望台', stay: 1.5, region: 14, regionName: '大阪南區', type: '經典必訪', desc: '日本第一高樓，擁有 360 度全景玻璃帷幕，推薦傍晚前往看夕陽與夜景。', transport: '地鐵或 JR 至「天王寺站」，出站即達。' },
+      { id: 'dotonbori', city: 'osaka', name: '道頓堀 & 心齋橋', stay: 3, region: 12, regionName: '大阪中區', type: '熱鬧商圈', desc: '大阪美食與藥妝的一級戰區。必拍地標「固力果跑跑人」。', transport: '地鐵至「難波站」或「心齋橋站」。' },
+      { id: 'umeda', city: 'osaka', name: '梅田商圈 (Umeda)', stay: 3, region: 11, regionName: '大阪北區', type: '熱鬧商圈', desc: '大型交通與百貨樞紐，適合主攻流行服飾、精品與文創商品採購。', transport: '搭乘 JR 至「大阪站」或地鐵至「梅田站」。' },
+      { id: 'kuromon', city: 'osaka', name: '黑門市場', stay: 1.5, region: 12, regionName: '大阪中區', type: '熱鬧商圈', desc: '「大阪的廚房」，能邊走邊吃體驗當地朝氣。主打海鮮與和牛。', transport: '地鐵千日前線/堺筋線至「日本橋站」。' },
+      { id: 'usj', city: 'osaka', name: '日本環球影城 (USJ)', stay: 8, region: 15, regionName: '大阪灣區', type: '遊樂休閒', desc: '世界級主題樂園，最受歡迎的是超級任天堂與哈利波特世界。', transport: 'JR 夢咲線至「環球城站 (Universal City)」。' },
+      { id: 'kaiyukan', city: 'osaka', name: '海遊館 (Kaiyukan)', stay: 2.5, region: 15, regionName: '大阪灣區', type: '遊樂休閒', desc: '世界最大級別室內水族館，以太平洋水槽與「鯨鯊」聞名。', transport: '地鐵中央線至「大阪港站」。' },
+      { id: 'tennoji_zoo', city: 'osaka', name: '天王寺動物園', stay: 2.5, region: 14, regionName: '大阪南區', type: '遊樂休閒', desc: '日本第三古老動物園，推廣「生態展示」。擁有北極熊及罕見奇異鳥，出園即達新世界吃串炸。', transport: '地鐵「動物園前站/惠美須町站」或「天王寺站」出站步行 5-10 分鐘。', tag: '百年歷史' },
+      { id: 'banpaku', city: 'osaka', name: '萬博紀念公園', stay: 3, region: 10, regionName: '大阪近郊', type: '近郊特色', desc: '1970 世界博覽會舊址，標誌性建築「太陽之塔」。', transport: '大阪單軌電車至「萬博紀念公園站」。' },
+      { id: 'mint', city: 'osaka', name: '造幣局 櫻花通道', stay: 1.5, region: 13, regionName: '大阪東區', type: '賞櫻賞楓', desc: '百大櫻花名所，一年僅限定開放一週！以重瓣櫻花為主。', transport: '地鐵或京阪本線至「天滿橋站」。', tag: '春季限定' },
+      { id: 'midosuji', city: 'osaka', name: '御堂筋 銀杏大道', stay: 1, region: 12, regionName: '大阪中區', type: '賞櫻賞楓', desc: '貫穿大阪市中心，秋季兩側銀杏樹化身金黃色隧道。', transport: '位於梅田至難波之間，多個地鐵站可達。', tag: '秋季限定' },
+      { id: 'namba_yasaka', city: 'osaka', name: '難波八阪神社', stay: 1, region: 12, regionName: '大阪中區', type: '特色神社', desc: '隱身在難波巷弄內的打卡點！擁有高達 12 公尺的巨型「獅子殿」，象徵吞噬厄運。', transport: '搭乘地鐵御堂筋線/四橋線至「難波站」，步行約 8-10 分鐘。' },
+
+      // ================= 京都 (Kyoto) =================
+      { id: 'kiyomizu', city: 'kyoto', name: '清水寺 & 二三年坂', stay: 3, region: 23, regionName: '京都東山', type: '經典必訪', desc: '懸空的「清水舞台」極具震撼力。周邊保留了傳統日式木造建築，是體驗和服散步的絕佳地點。', transport: '搭乘巴士至「五條坂」或「清水道」站，步行約 10-15 分鐘上坡。' },
+      { id: 'fushimi', city: 'kyoto', name: '伏見稻荷大社', stay: 2.5, region: 24, regionName: '京都洛南', type: '經典必訪', desc: '以綿延不絕、通往稻荷山的「千本鳥居」聞名全球。全日本稻荷神社的總本宮。', transport: 'JR「稻荷站」出站即達，或京阪本線「伏見稻荷站」步行 5 分鐘。' },
+      { id: 'kinkakuji', city: 'kyoto', name: '金閣寺 (鹿苑寺)', stay: 1.5, region: 21, regionName: '京都洛北', type: '經典必訪', desc: '外牆貼滿純金箔的三層樓閣，倒影在鏡湖池上金碧輝煌。', transport: '搭乘巴士至「金閣寺道」站，步行約 3 分鐘。' },
+      { id: 'arashiyama', city: 'kyoto', name: '嵐山 & 竹林小徑', stay: 4, region: 25, regionName: '京都洛西', type: '經典必訪', desc: '結合自然與人文。必訪「竹林小徑」、「渡月橋」及「嵐山嵯峨野觀光小火車」。', transport: 'JR「嵯峨嵐山站」或阪急/嵐電「嵐山站」。' },
+      { id: 'nijo', city: 'kyoto', name: '二条城 (Nijo Castle)', stay: 2, region: 22, regionName: '京都洛中', type: '歷史人文', desc: '德川家康在京都的寓所。擁有華麗壁畫與會發出聲響的「鸝鳴地板」。', transport: '地鐵東西線至「二条城前站」，出站即達。' },
+      { id: 'yasaka_gion', city: 'kyoto', name: '八坂神社 & 祇園', stay: 2, region: 23, regionName: '京都東山', type: '歷史人文', desc: '香火鼎盛的八坂神社。旁邊「花見小路」是京都最大的花街，傍晚有機會遇見藝妓。', transport: '京阪本線至「祇園四条站」步行 5 分鐘；或巴士至「祇園」站。' },
+      { id: 'nishiki', city: 'kyoto', name: '錦市場 (Nishiki Market)', stay: 1.5, region: 22, regionName: '京都洛中', type: '傳統市場', desc: '「京都的廚房」，擁有 400 年歷史。聚集各式京野菜、玉子燒與海鮮小吃。', transport: '地鐵「四条站」或阪急「京都河原町站」步行 3-5 分鐘。' },
+      { id: 'kawaramachi', city: 'kyoto', name: '河原町商圈', stay: 2.5, region: 22, regionName: '京都洛中', type: '傳統市場', desc: '京都最繁華的購物中心，百貨公司、藥妝店與餐廳林立，緊鄰鴨川。', transport: '阪急至「京都河原町站」，或京阪「祇園四条站」過橋即達。' },
+      { id: 'philosopher', city: 'kyoto', name: '哲學之道', stay: 1.5, region: 23, regionName: '京都洛東', type: '賞櫻賞楓', desc: '沿著渠道約 2 公里的步道。種滿數百棵櫻花樹，微風吹過時的「櫻吹雪」極度浪漫。', transport: '巴士至「銀閣寺道」或「南禪寺・永觀堂道」站下車。', tag: '春季限定' },
+      { id: 'keage', city: 'kyoto', name: '蹴上傾斜鐵道', stay: 1, region: 23, regionName: '京都洛東', type: '賞櫻賞楓', desc: '廢棄的舊鐵道兩側種滿吉野櫻，可走在鐵軌上與櫻花近距離拍照。', transport: '地鐵東西線至「蹴上站」，步行約 3 分鐘。', tag: '春季限定' },
+      { id: 'hirano', city: 'kyoto', name: '平野神社', stay: 1, region: 21, regionName: '京都洛北', type: '賞櫻賞楓', desc: '首屈一指的賞夜櫻名所。櫻花季期間會有許多屋台進駐，充滿祭典氛圍。', transport: '巴士至「衣笠校前」站，步行約 3 分鐘。', tag: '夜櫻名所' },
+      { id: 'tofukuji', city: 'kyoto', name: '東福寺', stay: 2, region: 24, regionName: '京都洛南', type: '賞櫻賞楓', desc: '京都秋季最具代表性賞楓勝地。從「通天橋」往外看彷彿漂浮在紅葉之海。', transport: 'JR 或京阪本線至「東福寺站」，步行約 10 分鐘。', tag: '秋季限定' },
+      { id: 'eikando', city: 'kyoto', name: '永觀堂 (禪林寺)', stay: 1.5, region: 23, regionName: '京都洛東', type: '賞櫻賞楓', desc: '「秋天就是永觀堂」境內約 3000 棵楓樹，夜間點燈後的紅葉倒影幽靜神秘。', transport: '巴士至「南禪寺・永觀堂道」站，步行約 3 分鐘。', tag: '秋季限定' },
+      { id: 'rurikoin', city: 'kyoto', name: '琉璃光院', stay: 2, region: 26, regionName: '京都郊區', type: '賞櫻賞楓', desc: '近年爆紅絕景！二樓書院黑色大桌子如鏡面般反射窗外的紅葉或新綠。', transport: '叡山電鐵至「八瀨比叡山口站」，步行約 5 分鐘。', tag: '預約制' },
+
+      // ================= 宇治 (Uji) =================
+      { id: 'byodoin', city: 'uji', name: '平等院 (Byodo-in)', stay: 2, region: 31, regionName: '宇治市', type: '歷史人文', desc: '日本十圓硬幣上的圖案所在地！必訪「鳳凰堂」，周邊可品嚐正宗宇治抹茶甜點。', transport: 'JR 或京阪宇治線至「宇治站」，步行約 10 分鐘。' },
+      { id: 'uji_river', city: 'uji', name: '宇治川與橘島', stay: 1.5, region: 31, regionName: '宇治市', type: '歷史人文', desc: '風景秀麗的宇治川，可以散步走過朝霧橋，享受寧靜的茶鄉氛圍。', transport: '從平等院步行即可抵達周邊水岸。' },
+
+      // ================= 奈良 (Nara) =================
+      { id: 'nara_park', city: 'nara', name: '奈良公園 (小鹿互動)', stay: 2.5, region: 41, regionName: '奈良市區', type: '經典必訪', desc: '擁有上千隻野生梅花鹿的廣大公園，可以購買鹿仙貝與牠們近距離互動。', transport: '近鐵「近鐵奈良站」步行約 5 分鐘，或 JR「奈良站」步行 20 分鐘。' },
+      { id: 'todaiji', city: 'nara', name: '東大寺 (大佛殿)', stay: 1.5, region: 41, regionName: '奈良市區', type: '歷史人文', desc: '世界最大木造建築之一，內部供奉高達 15 公尺的巨大青銅盧舍那佛像。', transport: '位於奈良公園內，步行抵達。' },
+      { id: 'kasuga', city: 'nara', name: '春日大社', stay: 1.5, region: 41, regionName: '奈良市區', type: '特色神社', desc: '擁有成千上萬座石燈籠與吊燈籠的古老神社，周圍被古老森林環繞，充滿神聖氣息。', transport: '從奈良公園內部步行約 15 分鐘上坡。' },
+
+      // ================= 神戶 (Kobe) =================
+      { id: 'kobe_port', city: 'kobe', name: '神戶港區 & 莫賽克廣場', stay: 2.5, region: 51, regionName: '神戶港區', type: '經典必訪', desc: '充滿異國風情的海港景觀，地標「神戶港塔」必拍。umie與莫賽克廣場是購物與吃神戶牛的好去處。', transport: '搭乘 JR 至「神戶站」步行 5 分鐘，或地鐵海岸線至「海港園地站」。' },
+      { id: 'kitano', city: 'kobe', name: '北野異人館街', stay: 2, region: 52, regionName: '神戶市區', type: '歷史人文', desc: '明治時代外國人居住的洋樓群，如「風見雞館」、「萌黃之館」，漫步其中彷彿置身歐洲。', transport: '搭乘 JR/阪急/阪神至「三宮站」，向北上坡步行約 15 分鐘。' },
+      { id: 'kobe_animal', city: 'kobe', name: '神戶動物王國', stay: 3, region: 53, regionName: '神戶人工島', type: '遊樂休閒', desc: '幾乎沒有柵欄的室內外動物園！可以近距離餵食水豚、樹懶，還有震撼的鳥類飛行秀。', transport: '從三宮站轉乘港灣人工島線 (Port Liner) 至「計算科學中心站」出站即達。' },
+      { id: 'arima', city: 'kobe', name: '有馬溫泉', stay: 4, region: 54, regionName: '神戶郊區', type: '特色溫泉', desc: '日本三大古湯之一。擁有富含鐵質的「金泉」與透明的「銀泉」，老街非常有氣氛。', transport: '從三宮或梅田搭乘高速巴士直達，或搭乘神戶電鐵至「有馬溫泉站」。' },
+      { id: 'maya', city: 'kobe', name: '摩耶山 掬星台', stay: 2, region: 55, regionName: '神戶郊區', type: '戶外絕景', desc: '日本三大夜景之一！被譽為「千萬美元夜景」，視野開闊可俯瞰整個大阪灣。', transport: '搭乘市營巴士至「摩耶纜車站」，轉乘纜車與索道至星之站。', tag: '百萬夜景' },
+
+      // ================= 姬路 (Himeji) =================
+      { id: 'himeji_castle', city: 'himeji', name: '姬路城 (白鷺城)', stay: 3, region: 61, regionName: '姬路市', type: '經典必訪', desc: '日本第一個世界文化遺產，保留最完整的國寶天守閣。因其白色的外牆，被稱為優雅的「白鷺城」。', transport: '搭乘 JR 神戶線或新幹線至「姬路站」，從北口出站直行步行約 15-20 分鐘。', tag: '世界遺產' },
+      { id: 'kokoen', city: 'himeji', name: '好古園', stay: 1.5, region: 61, regionName: '姬路市', type: '歷史人文', desc: '緊鄰姬路城的傳統日式庭園，由九個不同主題的江戶風情庭園組成，四季景色優美。', transport: '從姬路城出口步行約 5 分鐘即可抵達。' }
+    ];
+
+    const CITIES = [
+      { id: 'osaka', name: '大阪', color: 'blue' },
+      { id: 'kyoto', name: '京都', color: 'emerald' },
+      { id: 'nara', name: '奈良', color: 'amber' },
+      { id: 'uji', name: '宇治', color: 'teal' },
+      { id: 'kobe', name: '神戶', color: 'indigo' },
+      { id: 'himeji', name: '姬路', color: 'rose' }
+    ];
+
+    // --- 輔助函數：跨城交通建議 ---
+    const getCrossCityTransportDetail = (fromCity, toCity) => {
+      if (fromCity === toCity) return '';
+      const route = `${fromCity}-${toCity}`;
+
+      const routes = {
+        'osaka-kyoto': '建議搭乘 JR京都線新快速 (約30分) 或 阪急/京阪本線特急 (約45分)',
+        'kyoto-osaka': '建議搭乘 JR京都線新快速 (約30分) 或 阪急/京阪本線特急 (約45分)',
+        'osaka-nara': '建議搭乘 近鐵奈良線快速急行 (約40分) 或 JR大和路線大和路快速 (約50分)',
+        'nara-osaka': '建議搭乘 近鐵奈良線快速急行 (約40分) 或 JR大和路線大和路快速 (約50分)',
+        'osaka-uji': '建議搭乘 京阪本線轉宇治線，或 JR京都線轉奈良線 (約60分)',
+        'uji-osaka': '建議搭乘 京阪宇治線轉本線，或 JR奈良線轉京都線 (約60分)',
+        'osaka-kobe': '建議搭乘 JR神戶線新快速 (約25分) 或 阪急/阪神本線特急 (約35分)',
+        'kobe-osaka': '建議搭乘 JR神戶線新快速 (約25分) 或 阪急/阪神本線特急 (約35分)',
+        'osaka-himeji': '建議搭乘 JR神戶線新快速直達 (約65分) 或 新幹線 (約30分)',
+        'himeji-osaka': '建議搭乘 JR神戶線新快速直達 (約65分) 或 新幹線 (約30分)',
+        'kyoto-nara': '建議搭乘 近鐵京都線特急/急行 (約35-45分) 或 JR奈良線 (約45分)',
+        'nara-kyoto': '建議搭乘 近鐵京都線特急/急行 (約35-45分) 或 JR奈良線 (約45分)',
+        'kyoto-uji': '建議搭乘 JR奈良線 (約20分) 或 京阪本線轉宇治線 (約30分)',
+        'uji-kyoto': '建議搭乘 JR奈良線 (約20分) 或 京阪宇治線轉本線 (約30分)',
+        'kobe-himeji': '建議搭乘 JR神戶線新快速 (約40分)',
+        'himeji-kobe': '建議搭乘 JR神戶線新快速 (約40分)',
+        'kobe-nara': '建議搭乘 阪神本線直通近鐵奈良線快速急行 (約90分)',
+        'nara-kobe': '建議搭乘 近鐵奈良線直通阪神本線快速急行 (約90分)',
+        'kyoto-kobe': '建議搭乘 JR京都/神戶線新快速直達 (約55分) 或 阪急本線轉乘 (約70分)',
+        'kobe-kyoto': '建議搭乘 JR神戶/京都線新快速直達 (約55分) 或 阪急本線轉乘 (約70分)'
+      };
+
+      return routes[route] || '建議搭乘 JR 或 地區私鐵 進行跨城移動 (約60-90分)';
+    };
+
+    // --- 輔助函數：時間與顏色 ---
+    const formatTime = (timeInHours) => {
+      let h = Math.floor(timeInHours);
+      let m = Math.round((timeInHours - h) * 60);
+      if (m === 60) {
+        h += 1;
+        m = 0;
+      }
+      h = h % 24;
+      return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    };
+
+    const getCityColor = (cityId) => {
+      const city = CITIES.find(c => c.id === cityId);
+      if (cityId === 'osaka') return 'text-blue-600 bg-blue-100 border-blue-200';
+      if (cityId === 'kyoto') return 'text-emerald-600 bg-emerald-100 border-emerald-200';
+      if (cityId === 'nara') return 'text-amber-600 bg-amber-100 border-amber-200';
+      if (cityId === 'uji') return 'text-teal-600 bg-teal-100 border-teal-200';
+      if (cityId === 'kobe') return 'text-indigo-600 bg-indigo-100 border-indigo-200';
+      if (cityId === 'himeji') return 'text-rose-600 bg-rose-100 border-rose-200';
+      return 'text-slate-600 bg-slate-100 border-slate-200';
+    };
+
+    // --- 主程式 ---
+    function App() {
+      const [activeCity, setActiveCity] = useState('osaka');
+      const [selectedIds, setSelectedIds] = useState([]);
+      const [showPrintView, setShowPrintView] = useState(false);
+
+      const toggleAttraction = (id) => {
+        setSelectedIds(prev => 
+          prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+        );
+      };
+
+      const itineraryDays = useMemo(() => {
+        if (selectedIds.length === 0) return [];
+
+        const selected = selectedIds
+          .map(id => ATTRACTIONS.find(a => a.id === id))
+          .sort((a, b) => a.region - b.region);
+
+        const DAY_LIMIT = 12; 
+        let days = [];
+        let currentDay = { items: [], totalTime: 0 };
+        let lastRegion = null;
+        let lastCity = null;
+
+        selected.forEach(attr => {
+          let travelTime = 0;
+          const isFirstOfDay = currentDay.items.length === 0;
+          let fromCity = isFirstOfDay ? 'osaka' : lastCity;
+          let toCity = attr.city;
+
+          if (isFirstOfDay) {
+            travelTime = attr.city === 'osaka' ? 0.5 : 1.5;
+          } else {
+            if (lastCity !== attr.city) {
+              travelTime = 1.5; 
+            } else if (lastRegion !== attr.region) {
+              travelTime = 0.8; 
+            } else {
+              travelTime = 0.3; 
+            }
+          }
+
+          let requiredTime = attr.stay + travelTime;
+
+          if (requiredTime >= DAY_LIMIT) {
+            if (currentDay.items.length > 0) {
+              days.push(currentDay);
+              currentDay = { items: [], totalTime: 0 };
+              travelTime = attr.city === 'osaka' ? 0.5 : 1.5;
+              requiredTime = attr.stay + travelTime;
+              fromCity = 'osaka'; 
+            }
+            days.push({ items: [{ ...attr, travelTime, fromCity, toCity }], totalTime: requiredTime });
+            lastRegion = null;
+            lastCity = null;
+            return;
+          }
+
+          if (currentDay.totalTime + requiredTime > DAY_LIMIT && !isFirstOfDay) {
+            days.push(currentDay);
+            currentDay = { items: [], totalTime: 0 };
+            
+            travelTime = attr.city === 'osaka' ? 0.5 : 1.5; 
+            requiredTime = attr.stay + travelTime;
+            fromCity = 'osaka'; 
+          }
+
+          currentDay.items.push({ ...attr, travelTime, fromCity, toCity });
+          currentDay.totalTime += requiredTime;
+          lastRegion = attr.region;
+          lastCity = attr.city;
+        });
+
+        if (currentDay.items.length > 0) {
+          days.push(currentDay);
+        }
+
+        return days.map((day, index) => {
+          let currentTime = 9.0;
+          const scheduledItems = day.items.map(item => {
+            let travelStr = null;
+            if (item.travelTime > 0) {
+              const tStart = currentTime;
+              currentTime += item.travelTime;
+              travelStr = `${formatTime(tStart)} - ${formatTime(currentTime)}`;
+            }
+            const sStart = currentTime;
+            currentTime += item.stay;
+            const stayStr = `${formatTime(sStart)} - ${formatTime(currentTime)}`;
+            
+            return {
+              ...item,
+              timeStr: stayStr,
+              travelStr: travelStr
+            };
+          });
+
+          return {
+            dayNum: index + 1,
+            items: scheduledItems,
+            totalHours: Number(day.totalTime.toFixed(1)),
+            endTime: currentTime
+          };
+        });
+      }, [selectedIds]);
+
+      // ==========================================
+      // 列印模式 UI
+      // ==========================================
+      if (showPrintView) {
+        return (
+          <div className="min-h-screen bg-slate-100 text-slate-800 p-4 md:p-8 font-sans print:bg-white print:p-0">
+            <div className="max-w-3xl mx-auto bg-white shadow-xl rounded-2xl overflow-hidden border border-slate-200 print:shadow-none print:border-none">
+              
+              <div className="bg-slate-800 text-white p-8 text-center print:bg-white print:text-slate-900 print:p-4 print:border-b-2 print:border-slate-800">
+                <h1 className="text-3xl font-bold mb-2">✈️ 專屬關西自由行 行程表</h1>
+                <p className="text-slate-300 print:text-slate-600">為您精心規劃的 {itineraryDays.length} 天旅程，預祝旅途愉快！</p>
+              </div>
+
+              <div className="p-8 print:p-4">
+                {itineraryDays.map(day => (
+                  <div key={day.dayNum} className="mb-12 last:mb-0 print-break-avoid">
+                    <div className="flex items-center justify-between border-b-2 border-slate-200 pb-3 mb-6">
+                      <h2 className="text-2xl font-bold text-slate-800">🌞 第 {day.dayNum} 天</h2>
+                      <span className="text-sm font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
+                        總計: {day.totalHours} 小時
+                      </span>
+                    </div>
+                    
+                    <div className="relative border-l-2 border-slate-200 ml-5 pl-8 space-y-8">
+                      <div className="relative">
+                        <div className="absolute -left-[45px] top-0 bg-slate-200 text-slate-600 w-7 h-7 rounded-full border-[3px] border-white flex items-center justify-center text-xs font-bold shadow-sm">出發</div>
+                        <div className="font-bold text-slate-500 text-sm">09:00</div>
+                        <div className="text-slate-800 font-bold">從大阪的飯店出發</div>
+                      </div>
+
+                      {day.items.map((item, idx) => {
+                        const isCrossCity = item.fromCity !== item.toCity;
+                        const travelText = isCrossCity
+                          ? `🚄 跨城移動：${getCrossCityTransportDetail(item.fromCity, item.toCity)}`
+                          : `🚇 市區/同城移動約 ${Math.round(item.travelTime * 60)} 分`;
+                          
+                        return (
+                          <React.Fragment key={item.id}>
+                            {item.travelStr && (
+                              <div className="relative">
+                                <div className={`absolute -left-[38px] top-1 bg-white w-3 h-3 rounded-full border-[3px] ${isCrossCity ? 'border-red-300' : 'border-slate-300'}`}></div>
+                                <div className={`text-sm inline-block font-bold ${isCrossCity ? 'text-red-600 bg-red-50 border-red-200' : 'text-slate-600 bg-slate-50 border-slate-200'} border px-3 py-1.5 rounded-lg shadow-sm`}>
+                                  {item.travelStr} · {travelText}
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="relative bg-white border-2 border-slate-100 p-5 rounded-xl shadow-sm">
+                              <div className="absolute -left-[54px] top-5 bg-slate-800 text-white w-10 h-10 rounded-full border-4 border-white flex items-center justify-center text-sm font-bold shadow">
+                                <i className="fa-solid fa-location-dot"></i>
+                              </div>
+                              <div className="text-slate-500 font-bold mb-1">{item.timeStr}</div>
+                              <h4 className="font-bold text-xl text-slate-900 mb-2">{item.name}</h4>
+                              <div className="flex flex-wrap gap-2 mb-3">
+                                <span className="text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2 py-1 rounded font-bold">停留 {item.stay}h</span>
+                                <span className="text-xs bg-slate-100 text-slate-700 border border-slate-200 px-2 py-1 rounded font-bold">{item.regionName}</span>
+                              </div>
+                              <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100 leading-relaxed">
+                                <strong className="text-blue-600"><i className="fa-solid fa-lightbulb"></i> 自由行到達方式：</strong>{item.transport}
+                              </div>
+                            </div>
+                          </React.Fragment>
+                        );
+                      })}
+
+                      <div className="relative">
+                        <div className="absolute -left-[45px] top-0 bg-slate-200 text-slate-600 w-7 h-7 rounded-full border-[3px] border-white flex items-center justify-center text-xs font-bold shadow-sm">結束</div>
+                        <div className="font-bold text-slate-500 text-sm">{formatTime(day.endTime)}</div>
+                        <div className="text-slate-800 font-bold">行程結束 / 晚餐自由活動</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="bg-slate-50 p-6 text-center border-t border-slate-200 print-hidden flex justify-center gap-4">
+                <button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg transition-all flex items-center gap-2">
+                  <i className="fa-solid fa-print"></i> 列印 / 儲存為 PDF
+                </button>
+                <button onClick={() => setShowPrintView(false)} className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-6 py-3 rounded-xl font-bold shadow transition-all">
+                  返回編輯行程
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // ==========================================
+      // 主畫面編輯器 UI
+      // ==========================================
+      const filteredAttractions = ATTRACTIONS.filter(a => a.city === activeCity);
+      const groupedAttractions = filteredAttractions.reduce((acc, curr) => {
+        if (!acc[curr.type]) acc[curr.type] = [];
+        acc[curr.type].push(curr);
+        return acc;
+      }, {});
+
+      return (
+        <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-10">
+          <header className="bg-white shadow-sm sticky top-0 z-20">
+            <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <i className="fa-solid fa-map-location-dot text-blue-600 text-2xl"></i>
+                  <h1 className="text-xl font-bold text-slate-900">關西自由行 行程魔法師</h1>
+                </div>
+                <a 
+                  href="https://linkuei0425.github.io/Osaka/index.html" 
+                  className="flex items-center gap-1.5 text-sm font-bold text-slate-500 hover:text-blue-600 bg-slate-100 hover:bg-blue-50 px-3 py-1.5 rounded-full transition-colors border border-slate-200 hover:border-blue-200"
+                  title="回到首頁"
+                >
+                  <i className="fa-solid fa-house"></i>
+                  <span>首頁</span>
+                </a>
+              </div>
+              <div className="text-sm font-medium bg-slate-800 text-white px-4 py-1.5 rounded-full shadow-sm">
+                已選 {selectedIds.length} 個景點
+              </div>
+            </div>
+          </header>
+
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+            <div className="flex flex-col lg:flex-row gap-8">
+              
+              {/* 左側：景點選擇 */}
+              <div className="lg:w-1/2 flex flex-col gap-5">
+                <div className="bg-white rounded-xl shadow-sm p-2 flex gap-2 overflow-x-auto border border-slate-200 custom-scrollbar">
+                  {CITIES.map(city => (
+                    <button
+                      key={city.id}
+                      onClick={() => setActiveCity(city.id)}
+                      className={`flex-1 min-w-[80px] py-2.5 px-4 rounded-lg font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
+                        activeCity === city.id 
+                          ? 'bg-slate-800 text-white shadow-md transform scale-[1.02]' 
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {city.name}
+                      {selectedIds.filter(id => ATTRACTIONS.find(a => a.id === id)?.city === city.id).length > 0 && (
+                        <span className="bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
+                          {selectedIds.filter(id => ATTRACTIONS.find(a => a.id === id)?.city === city.id).length}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm p-4 border border-slate-200">
+                  <h2 className="text-base font-semibold flex items-center gap-2 mb-1">
+                    <i className="fa-solid fa-check text-green-500"></i>
+                    正在挑選：{CITIES.find(c => c.id === activeCity)?.name} 景點
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    點擊卡片選擇景點。切換上方標籤可跨城市挑選，系統會自動幫您規劃包含「跨城市交通」的順暢路線。
+                  </p>
+                </div>
+
+                <div className="space-y-6 max-h-[65vh] overflow-y-auto pr-2 custom-scrollbar">
+                  {Object.entries(groupedAttractions).map(([type, items]) => (
+                    <div key={type}>
+                      <div className="flex items-center gap-2 mb-3 sticky top-0 bg-slate-50/90 backdrop-blur py-2 z-10">
+                        <span className="bg-slate-400 w-1.5 h-1.5 rounded-full"></span>
+                        <h3 className="font-bold text-slate-700">{type}</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {items.map(attr => {
+                          const isSelected = selectedIds.includes(attr.id);
+                          return (
+                            <div 
+                              key={attr.id}
+                              onClick={() => toggleAttraction(attr.id)}
+                              className={`relative p-4 rounded-xl cursor-pointer transition-all duration-200 border-2 ${
+                                isSelected 
+                                  ? 'bg-blue-50 border-blue-500 shadow-md transform scale-[1.02]' 
+                                  : 'bg-white border-transparent shadow-sm hover:border-slate-300'
+                              }`}
+                            >
+                              <div className={`absolute top-3 right-3 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                isSelected ? 'bg-blue-500 border-blue-500' : 'border-slate-300'
+                              }`}>
+                                {isSelected && <i className="fa-solid fa-check text-white text-xs"></i>}
+                              </div>
+
+                              <div className="pr-6">
+                                <h4 className="font-bold text-slate-900 leading-tight mb-2">{attr.name}</h4>
+                                <div className="flex flex-wrap items-center gap-2 text-xs font-medium mb-2">
+                                  <span className="flex items-center gap-1 bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+                                    <i className="fa-regular fa-clock"></i> {attr.stay}h
+                                  </span>
+                                  <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded border ${getCityColor(attr.city)}`}>
+                                    <i className="fa-solid fa-location-dot"></i> {attr.regionName}
+                                  </span>
+                                </div>
+                                {attr.tag && (
+                                  <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full mb-2 font-bold ${
+                                    attr.tag.includes('春') ? 'bg-pink-100 text-pink-700' : 
+                                    attr.tag.includes('秋') ? 'bg-orange-100 text-orange-700' : 
+                                    'bg-purple-100 text-purple-700'
+                                  }`}>
+                                    {attr.tag}
+                                  </span>
+                                )}
+                                <p className="text-xs text-slate-500 line-clamp-2 mb-1.5">{attr.desc}</p>
+                                <div className="text-[10px] text-slate-500 bg-slate-50 p-1.5 rounded border border-slate-100">
+                                  <span className="font-bold text-blue-600">自由行到達方式：</span>{attr.transport}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 右側：自動生成的行程表 */}
+              <div className="lg:w-1/2">
+                <div className="sticky top-24 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+                  
+                  <div className="bg-slate-800 text-white p-5">
+                    <div className="mb-4">
+                      <h2 className="text-xl font-bold flex items-center gap-2">
+                        <i className="fa-regular fa-calendar-check text-blue-400 text-2xl"></i>
+                        專屬關西行程表
+                      </h2>
+                      <p className="text-slate-300 text-sm mt-1">
+                        自動合併跨城景點，每日最多 12 小時
+                      </p>
+                    </div>
+                    
+                    <button
+                      onClick={() => setShowPrintView(true)}
+                      disabled={itineraryDays.length === 0}
+                      className={`w-full flex items-center justify-center gap-2 text-sm font-bold py-3.5 px-4 rounded-xl shadow transition-all ${
+                        itineraryDays.length > 0 
+                          ? 'bg-blue-500 hover:bg-blue-600 text-white transform hover:scale-[1.02] cursor-pointer' 
+                          : 'bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600'
+                      }`}
+                      title="開啟滿版輸出畫面"
+                    >
+                      <i className="fa-solid fa-arrow-up-right-from-square text-lg"></i>
+                      確認並輸出 (景點可跨區域選完後再按確認)
+                    </button>
+                  </div>
+
+                  <div className="p-5 overflow-y-auto flex-1 bg-slate-50 custom-scrollbar">
+                    {itineraryDays.length === 0 ? (
+                      <div className="h-full flex flex-col items-center justify-center text-slate-400 py-12">
+                        <i className="fa-solid fa-camera text-6xl mb-4 opacity-20"></i>
+                        <p>尚未選擇任何景點</p>
+                        <p className="text-sm mt-2">請從左側分頁挑選想去的城市與景點</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-8">
+                        {itineraryDays.map((day) => (
+                          <div key={day.dayNum} className="relative">
+                            <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-2">
+                              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <i className="fa-solid fa-sun text-orange-500"></i> 第 {day.dayNum} 天
+                              </h3>
+                              <span className="text-sm font-medium text-slate-500 bg-white px-2 py-1 rounded-md shadow-sm border border-slate-100">
+                                總計: {day.totalHours} 小時
+                              </span>
+                            </div>
+
+                            <div className="space-y-0 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
+                              
+                              <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active mb-4">
+                                <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-slate-200 text-slate-500 shadow-sm shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                                  <span className="text-[10px] font-bold">09:00</span>
+                                </div>
+                                <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] text-xs font-bold text-slate-400 pl-4 md:pl-0 md:text-right md:group-odd:pr-4 md:group-even:pl-4">
+                                  從大阪的飯店出發
+                                </div>
+                              </div>
+
+                              {day.items.map((item, idx) => {
+                                const isCrossCity = item.fromCity !== item.toCity;
+
+                                return (
+                                  <React.Fragment key={`${day.dayNum}-${item.id}`}>
+                                    {item.travelStr && (
+                                      <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group mb-4">
+                                        <div className={`flex items-center justify-center w-10 h-10 rounded-full bg-slate-50 border-2 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 ${isCrossCity ? 'border-red-300 text-red-500' : 'border-slate-200 text-slate-400'}`}>
+                                          <i className="fa-solid fa-train"></i>
+                                        </div>
+                                        <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] pl-4 md:pl-0 md:text-right md:group-odd:pr-4 md:group-even:pl-4">
+                                          <div className={`text-xs bg-white border shadow-sm rounded-lg p-2 inline-block ${isCrossCity ? 'border-red-200' : 'border-slate-100 text-slate-500'}`}>
+                                            <div className={`font-semibold ${isCrossCity ? 'text-red-600' : 'text-slate-700'}`}>{item.travelStr}</div>
+                                            <div className={isCrossCity ? 'text-red-500 font-medium' : ''}>
+                                              {isCrossCity 
+                                                ? `🚄 跨城移動：${getCrossCityTransportDetail(item.fromCity, item.toCity)}`
+                                                : `🚇 市區/同城移動約 ${Math.round(item.travelTime * 60)} 分`
+                                              }
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group mb-4">
+                                      <div className={`flex items-center justify-center w-10 h-10 rounded-full border-4 border-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 ${
+                                        item.stay >= 8 ? 'bg-purple-600' : 'bg-slate-800'
+                                      } text-white`}>
+                                        <i className="fa-solid fa-location-dot"></i>
+                                      </div>
+                                      <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-xl bg-white shadow-md border border-slate-100 md:group-odd:text-right">
+                                        <div className="text-slate-500 font-bold text-sm mb-1">{item.timeStr}</div>
+                                        <h4 className="font-bold text-slate-900 text-base mb-1">{item.name}</h4>
+                                        <div className="flex flex-wrap gap-2 mb-2 md:group-odd:justify-end">
+                                          <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded font-medium text-slate-600">停留 {item.stay}h</span>
+                                          <span className={`text-[10px] px-2 py-0.5 rounded font-bold border ${getCityColor(item.city)}`}>
+                                            {CITIES.find(c => c.id === item.city)?.name} · {item.regionName}
+                                          </span>
+                                        </div>
+                                        <div className="text-xs text-slate-500 flex items-start gap-1 md:group-odd:justify-end">
+                                          <i className="fa-solid fa-circle-info shrink-0 mt-0.5"></i>
+                                          <span className="text-left"><strong className="text-blue-600">自由行到達方式：</strong>{item.transport}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </React.Fragment>
+                                );
+                              })}
+                              
+                              <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                                <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-slate-200 text-slate-500 shadow-sm shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                                  <span className="text-[10px] font-bold">{formatTime(day.endTime)}</span>
+                                </div>
+                                <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] text-xs font-bold text-slate-400 pl-4 md:pl-0 md:text-right md:group-odd:pr-4 md:group-even:pl-4">
+                                  行程結束 / 晚餐自由活動
+                                </div>
+                              </div>
+
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {itineraryDays.length > 0 && (
+                    <div className="bg-slate-100 p-3 text-xs text-slate-600 flex items-start gap-2 border-t border-slate-200">
+                      <i className="fa-solid fa-circle-exclamation shrink-0 mt-0.5 text-slate-500"></i>
+                      <p>
+                        提示：行程預設每天從<strong>「大阪市區的飯店」</strong>出發。若當日第一站位於外縣市，系統會自動加入跨城搭車路線與時間建議。
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    // 渲染應用程式
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
